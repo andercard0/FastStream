@@ -530,6 +530,9 @@
     "player_quality_current": {
         "message": "(attuale)"
     },
+    "player_quality_unknown": {
+        "message": "(sconosciuto)"
+    },
     "player_buffer_incognito_warning": {
         "message": "Spazio insufficiente per il pre-download in modalità di navigazione in incognito, verrà eseguito il buffering di $1"
     },
@@ -967,6 +970,24 @@
     },
     "options_general_minisize": {
         "message": "Dimensioni del miniplayer"
+    },
+    "options_general_color_theme": {
+        "message": "Tema colore del lettore video"
+    },
+    "options_general_color_theme_default": {
+        "message": "Predefinito Scuro"
+    },
+    "options_general_color_theme_arctic": {
+        "message": "Artico"
+    },
+    "options_general_color_theme_ocean": {
+        "message": "Oceano"
+    },
+    "options_general_color_theme_neon": {
+        "message": "Neon"
+    },
+    "options_general_color_theme_contrast": {
+        "message": "Alto Contrasto"
     },
     "options_general_vischangeaction_pip": {
         "message": "Attiva/disattiva il picture-in-picture"

@@ -39,14 +39,30 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.audioCrosstalk.on('upscale', upscale);
 
     this.setupUI();
-    this.loadProfilesFromStorage();
+    this.loadProfilesFromStorage().then(() => {
+      this.loadDefaultProfiles();
+    }).catch((e) => {
+      AlertPolyfill.errorSendToDeveloper(e);
+    });
   }
 
+  async loadDefaultProfiles() {
+    try {
+      const loadedDefaultProfiles = await Utils.getConfig('loadedDefaultAudioProfiles');
+      if (loadedDefaultProfiles === '1') {
+        return;
+      }
+      const {DefaultProfilesData} = await import('./config/DefaultProfiles.mjs');
+      await this.loadProfileFile(DefaultProfilesData);
+      await Utils.setConfig('loadedDefaultAudioProfiles', '1');
+    } catch (e) {
+      AlertPolyfill.errorSendToDeveloper(e);
+    }
+  }
   async loadProfilesFromStorage() {
     try {
       const audioProfilesStr = await Utils.getConfig('audioProfiles') || '[]';
       const currentAudioProfileStr = await Utils.getConfig('currentAudioProfile') || '-1';
-
       const audioProfiles = JSON.parse(audioProfilesStr);
       const currentAudioProfileID = parseInt(currentAudioProfileStr);
 
@@ -169,19 +185,21 @@ export class AudioConfigManager extends AbstractAudioModule {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
-            input.addEventListener('change', () => {
-              const file = input.files[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                try {
-                  const obj = JSON.parse(e.target.result);
-                  this.loadProfileFile(obj);
-                } catch (e) {
-                  AlertPolyfill.alert(Localize.getMessage('player_audioconfig_import_invalid'), 'error');
-                }
-              };
-              reader.readAsText(file);
+            input.multiple = true;
+            input.addEventListener('change', (e) => {
+              const files = Array.from(e.target.files);
+              files.forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  try {
+                    const obj = JSON.parse(e.target.result);
+                    this.loadProfileFile(obj);
+                  } catch (e) {
+                    AlertPolyfill.alert(Localize.getMessage('player_audioconfig_import_invalid'), 'error');
+                  }
+                };
+                reader.readAsText(file);
+              });
             });
             input.click();
           } else {
@@ -335,7 +353,7 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.ui.downloadButton.textContent = Localize.getMessage('player_audioconfig_profile_download');
     let downloadTimeout = null;
     this.ui.profileManager.appendChild(this.ui.downloadButton);
-    this.ui.downloadButton.addEventListener('click', () => {
+    this.ui.downloadButton.addEventListener('click', (e) => {
       const profile = this.getDropdownProfile();
       if (!profile) {
         this.updateProfileDropdown();
@@ -348,14 +366,21 @@ export class AudioConfigManager extends AbstractAudioModule {
         profiles: [],
       };
 
-      const profileObj = profile.toObj();
-      delete profileObj.id;
-      data.profiles.push(profileObj);
+      const shouldDownloadAll = e.shiftKey || e.metaKey;
+      if (shouldDownloadAll) {
+        this.profiles.forEach((profile) => {
+          data.profiles.push(profile.toObj());
+        });
+      } else {
+        const profileObj = profile.toObj();
+        delete profileObj.id;
+        data.profiles.push(profileObj);
+      }
 
       const downloadBlob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(downloadBlob);
-      a.download = `${profile.label}.fsprofile.json`;
+      a.download = `${shouldDownloadAll ? 'all' : profile.label}.fsprofile.json`;
       a.click();
       this.ui.downloadButton.textContent = Localize.getMessage('player_audioconfig_profile_downloaded');
       clearTimeout(downloadTimeout);
